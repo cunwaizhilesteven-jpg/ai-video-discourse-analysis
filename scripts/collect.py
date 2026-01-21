@@ -69,11 +69,12 @@ class YouTubeCommentCollector:
 
         try:
             # Use yt-dlp to get video IDs
+            # Use channel URL directly (yt-dlp handles it)
             cmd = [
                 "yt-dlp",
                 "--get-id",
                 "--flat-playlist",
-                f"{self.channel_url}/videos"
+                self.channel_url
             ]
 
             result = subprocess.run(

@@ -5,7 +5,12 @@
       "Bash(git config:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(gh auth status:*)"
+      "Bash(gh auth status:*)",
+      "Bash(pip install:*)",
+      "Bash(python main.py:*)",
+      "Bash(py:*)",
+      "Bash(yt-dlp:*)",
+      "Bash(dir:*)"
     ]
   }
 }
