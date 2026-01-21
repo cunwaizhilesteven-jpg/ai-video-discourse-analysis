@@ -4,76 +4,121 @@ Analyzing user acceptance and engagement with AI-generated videos using sentimen
 
 ## Quick Start
 
-1. **Read CLAUDE.md first** - Contains essential rules for Claude Code
-2. Follow the pre-task compliance checklist before starting any work
-3. Use proper module structure under `src/main/python/`
-4. Commit after every completed task
+```bash
+# 1. Create and activate virtual environment
+python -m venv venv
+venv\Scripts\activate  # Windows
+source venv/bin/activate  # Linux/Mac
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Run full analysis pipeline
+python main.py https://www.youtube.com/@ReallyNotAi
+
+# Or with limited videos for testing
+python main.py https://www.youtube.com/@ReallyNotAi --max-videos 5
+```
 
 ## Project Structure
 
 ```
 ai-video-discourse-analysis/
-├── CLAUDE.md              # Essential rules for Claude Code
-├── README.md              # Project documentation
-├── .gitignore             # Git ignore patterns
-├── src/                   # Source code
-│   ├── main/
-│   │   ├── python/        # Python source code
-│   │   │   ├── core/      # Core sentiment analysis algorithms
-│   │   │   ├── utils/     # Data processing utilities
-│   │   │   ├── models/    # Model definitions
-│   │   │   ├── services/  # Analysis services and pipelines
-│   │   │   ├── api/       # API endpoints
-│   │   │   ├── training/  # Training scripts
-│   │   │   ├── inference/ # Inference code
-│   │   │   └── evaluation/# Model evaluation
-│   │   └── resources/     # Configuration and assets
-│   └── test/              # Test code
-├── data/                  # Dataset management
-│   ├── raw/               # Raw YouTube comment data
-│   ├── processed/         # Cleaned and transformed data
-│   ├── external/          # External data sources
-│   └── temp/              # Temporary files
-├── notebooks/             # Jupyter notebooks
-│   ├── exploratory/       # Data exploration
-│   ├── experiments/       # ML experiments
-│   └── reports/           # Analysis reports
-├── models/                # ML model artifacts
-│   ├── trained/           # Trained models
-│   ├── checkpoints/       # Model checkpoints
-│   └── metadata/          # Model metadata
-├── experiments/           # Experiment tracking
-├── docs/                  # Documentation
-├── output/                # Generated output files
-└── logs/                  # Log files
+├── main.py                # Main entry point
+├── requirements.txt       # Python dependencies
+├── scripts/               # Core modules
+│   ├── collect.py         # YouTube comment collection (yt-dlp + youtube-comment-downloader)
+│   ├── processor.py       # Data cleaning and consolidation
+│   ├── analyzer.py        # Sentiment analysis (DistilBERT) + linguistic complexity
+│   └── visualizer.py      # Visualization generation (PNG + HTML)
+├── data/
+│   ├── raw_json/          # Individual JSON files per video
+│   ├── progress/          # Checkpoint files for resume support
+│   └── merged_data.csv    # Final cleaned and analyzed dataset
+├── output/
+│   ├── png/               # Static chart images
+│   └── html/              # Interactive charts
+└── logs/                  # Execution logs
 ```
 
-## Development Guidelines
+## Modules
 
-- **Always search first** before creating new files
-- **Extend existing** functionality rather than duplicating
-- **Use Task agents** for operations >30 seconds
-- **Single source of truth** for all functionality
-- **Commit after each feature** with descriptive messages
-
-## Key Features
-
-- YouTube comment extraction and preprocessing
-- Sentiment analysis on AI-generated video comments
-- Linguistic complexity measurement
-- User engagement metrics analysis
-- Comparative analysis between AI and human-created content
-
-## Getting Started
+### 1. Data Collection (`scripts/collect.py`)
+- Extracts all video IDs from a YouTube channel using `yt-dlp`
+- Downloads comments for each video using `youtube-comment-downloader`
+- Supports checkpoint/resume for interrupted downloads
+- Automatic retry with exponential backoff
 
 ```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies (when requirements.txt is created)
-pip install -r requirements.txt
+# Standalone usage
+python scripts/collect.py https://www.youtube.com/@ReallyNotAi --max-videos 10
 ```
+
+### 2. Data Processing (`scripts/processor.py`)
+- Consolidates JSON files into a single CSV
+- Extracts fields: text, votes, replies, time, video_id
+- Removes duplicates and emoji-only comments
+
+```bash
+# Standalone usage
+python scripts/processor.py --raw-dir data/raw_json --output data/merged_data.csv
+```
+
+### 3. Analysis (`scripts/analyzer.py`)
+- Sentiment analysis using `distilbert-base-uncased-finetuned-sst-2-english`
+- Linguistic complexity using `textstat` (lexical density, Flesch reading ease)
+- Batch processing with GPU support
+
+```bash
+# Standalone usage
+python scripts/analyzer.py --input data/merged_data.csv
+```
+
+### 4. Visualization (`scripts/visualizer.py`)
+- Chart 1: Sentiment distribution pie chart
+- Chart 2: Engagement (lexical density) vs Acceptance (sentiment) scatter plot
+- Chart 3: Negative comments word cloud
+- Outputs both PNG and interactive HTML formats
+
+```bash
+# Standalone usage
+python scripts/visualizer.py --input data/merged_data.csv --output-dir output
+```
+
+## Output
+
+After running the full pipeline, you will find:
+
+| File | Description |
+|------|-------------|
+| `data/merged_data.csv` | All comments with sentiment labels and complexity scores |
+| `output/png/sentiment_distribution.png` | Sentiment pie chart |
+| `output/png/engagement_scatter.png` | Engagement vs acceptance scatter plot |
+| `output/png/negative_wordcloud.png` | Word cloud of negative comments |
+| `output/html/sentiment_distribution.html` | Interactive pie chart |
+| `output/html/engagement_scatter.html` | Interactive scatter plot |
+
+## Command Line Options
+
+```bash
+python main.py <channel_url> [options]
+
+Options:
+  --max-videos N    Limit number of videos to process (default: all)
+  --skip-collect    Skip data collection (use existing raw data)
+  --skip-analyze    Skip analysis (use existing analyzed data)
+```
+
+## Dependencies
+
+- `yt-dlp` - YouTube video ID extraction
+- `youtube-comment-downloader` - Comment downloading
+- `pandas` - Data processing
+- `transformers` + `torch` - DistilBERT sentiment analysis
+- `textstat` - Linguistic complexity metrics
+- `matplotlib` + `seaborn` - Static visualizations
+- `plotly` - Interactive visualizations
+- `wordcloud` - Word cloud generation
 
 ## License
 

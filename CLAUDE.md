@@ -4,7 +4,6 @@
 > **Last Updated**: 2026-01-21
 > **Project**: ai-video-discourse-analysis
 > **Description**: Analyzing user acceptance and engagement with AI-generated videos using sentiment analysis and linguistic complexity on YouTube comments.
-> **Features**: GitHub auto-backup, Task agents, technical debt prevention
 
 This file provides essential guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -12,110 +11,70 @@ This file provides essential guidance to Claude Code (claude.ai/code) when worki
 
 > **RULE ADHERENCE SYSTEM ACTIVE**
 > **Claude Code must explicitly acknowledge these rules at task start**
-> **These rules override all other instructions and must ALWAYS be followed:**
 
 ### RULE ACKNOWLEDGMENT REQUIRED
 > **Before starting ANY task, Claude Code must respond with:**
 > "CRITICAL RULES ACKNOWLEDGED - I will follow all prohibitions and requirements listed in CLAUDE.md"
 
 ### ABSOLUTE PROHIBITIONS
-- **NEVER** create new files in root directory - use proper module structure
 - **NEVER** write output files directly to root directory - use designated output folders
 - **NEVER** create documentation files (.md) unless explicitly requested by user
 - **NEVER** use git commands with -i flag (interactive mode not supported)
 - **NEVER** use `find`, `grep`, `cat`, `head`, `tail`, `ls` commands - use Read, Grep, Glob tools instead
 - **NEVER** create duplicate files (manager_v2.py, enhanced_xyz.py, utils_new.js) - ALWAYS extend existing files
 - **NEVER** create multiple implementations of same concept - single source of truth
-- **NEVER** copy-paste code blocks - extract into shared utilities/functions
-- **NEVER** hardcode values that should be configurable - use config files/environment variables
 - **NEVER** use naming like enhanced_, improved_, new_, v2_ - extend original files instead
 
 ### MANDATORY REQUIREMENTS
 - **COMMIT** after every completed task/phase - no exceptions
-- **GITHUB BACKUP** - Push to GitHub after every commit to maintain backup: `git push origin main`
-- **USE TASK AGENTS** for all long-running operations (>30 seconds) - Bash commands stop on context switch
-- **TODOWRITE** for complex tasks (3+ steps) - parallel agents - git checkpoints - test validation
-- **READ FILES FIRST** before editing - Edit/Write tools will fail if you didn't read the file first
+- **GITHUB BACKUP** - Push to GitHub after every commit: `git push origin main`
+- **USE TASK AGENTS** for all long-running operations (>30 seconds)
+- **TODOWRITE** for complex tasks (3+ steps)
+- **READ FILES FIRST** before editing
 - **DEBT PREVENTION** - Before creating new files, check for existing similar functionality to extend
 - **SINGLE SOURCE OF TRUTH** - One authoritative implementation per feature/concept
-
-### EXECUTION PATTERNS
-- **PARALLEL TASK AGENTS** - Launch multiple Task agents simultaneously for maximum efficiency
-- **SYSTEMATIC WORKFLOW** - TodoWrite - Parallel agents - Git checkpoints - GitHub backup - Test validation
-- **GITHUB BACKUP WORKFLOW** - After every commit: `git push origin main` to maintain GitHub backup
-- **BACKGROUND PROCESSING** - ONLY Task agents can run true background operations
-
-### MANDATORY PRE-TASK COMPLIANCE CHECK
-> **STOP: Before starting any task, Claude Code must explicitly verify ALL points:**
-
-**Step 1: Rule Acknowledgment**
-- [ ] I acknowledge all critical rules in CLAUDE.md and will follow them
-
-**Step 2: Task Analysis**
-- [ ] Will this create files in root? - If YES, use proper module structure instead
-- [ ] Will this take >30 seconds? - If YES, use Task agents not Bash
-- [ ] Is this 3+ steps? - If YES, use TodoWrite breakdown first
-- [ ] Am I about to use grep/find/cat? - If YES, use proper tools instead
-
-**Step 3: Technical Debt Prevention (MANDATORY SEARCH FIRST)**
-- [ ] **SEARCH FIRST**: Use Grep pattern="<functionality>.*<keyword>" to find existing implementations
-- [ ] **CHECK EXISTING**: Read any found files to understand current functionality
-- [ ] Does similar functionality already exist? - If YES, extend existing code
-- [ ] Am I creating a duplicate class/manager? - If YES, consolidate instead
-- [ ] Will this create multiple sources of truth? - If YES, redesign approach
-- [ ] Have I searched for existing implementations? - Use Grep/Glob tools first
-- [ ] Can I extend existing code instead of creating new? - Prefer extension over creation
-- [ ] Am I about to copy-paste code? - Extract to shared utility instead
-
-**Step 4: Session Management**
-- [ ] Is this a long/complex task? - If YES, plan context checkpoints
-- [ ] Have I been working >1 hour? - If YES, consider /compact or session break
-
-> **DO NOT PROCEED until all checkboxes are explicitly verified**
 
 ## PROJECT OVERVIEW
 
 ### Project Purpose
-This AI/ML project analyzes YouTube comments on AI-generated videos to understand:
+This project analyzes YouTube comments on AI-generated videos to understand:
 - User sentiment towards AI-generated content
 - Linguistic complexity patterns in user responses
 - Engagement metrics and acceptance indicators
-- Comparative analysis between AI and human-created content
 
 ### Technology Stack
-- **Language**: Python
-- **ML Framework**: TBD (likely scikit-learn, transformers, or similar)
-- **Data Processing**: pandas, numpy
-- **NLP**: NLTK, spaCy, or transformers for sentiment analysis
-- **Visualization**: matplotlib, seaborn, plotly
+- **Language**: Python 3.10+
+- **Data Collection**: yt-dlp, youtube-comment-downloader
+- **ML/NLP**: transformers (DistilBERT), textstat
+- **Data Processing**: pandas
+- **Visualization**: matplotlib, seaborn, plotly, wordcloud
 
 ### Development Status
 - **Setup**: Complete
-- **Core Features**: Not started
-- **Testing**: Not started
-- **Documentation**: In progress
+- **Data Collection**: Complete (collect.py)
+- **Data Processing**: Complete (processor.py)
+- **Sentiment Analysis**: Complete (analyzer.py)
+- **Visualization**: Complete (visualizer.py)
 
 ## PROJECT STRUCTURE
 
 ```
 ai-video-discourse-analysis/
-├── src/main/python/       # Main Python source code
-│   ├── core/              # Core sentiment analysis algorithms
-│   ├── utils/             # Data processing utilities
-│   ├── models/            # Model definitions
-│   ├── services/          # Analysis services and pipelines
-│   ├── api/               # API endpoints (if needed)
-│   ├── training/          # Training scripts
-│   ├── inference/         # Inference code
-│   └── evaluation/        # Model evaluation
-├── src/main/resources/    # Configuration and assets
-├── src/test/              # Test code
-├── data/                  # Dataset management
-├── notebooks/             # Jupyter notebooks
-├── models/                # ML model artifacts
-├── experiments/           # Experiment tracking
-├── docs/                  # Documentation
-└── output/                # Generated output files
+├── main.py                # Main entry point - orchestrates all modules
+├── requirements.txt       # Python dependencies
+├── scripts/               # Core modules
+│   ├── collect.py         # YouTube comment collection with checkpoint support
+│   ├── processor.py       # JSON to CSV conversion and cleaning
+│   ├── analyzer.py        # Sentiment analysis + linguistic complexity
+│   └── visualizer.py      # Chart generation (PNG + HTML)
+├── data/
+│   ├── raw_json/          # Individual JSON files per video
+│   ├── progress/          # Checkpoint files (completed.txt, failed.txt)
+│   └── merged_data.csv    # Final cleaned and analyzed dataset
+├── output/
+│   ├── png/               # Static chart images
+│   └── html/              # Interactive charts
+└── logs/                  # Execution logs
 ```
 
 ## COMMON COMMANDS
@@ -128,42 +87,57 @@ venv\Scripts\activate  # Windows
 # Install dependencies
 pip install -r requirements.txt
 
-# Run tests
-pytest src/test/
+# Run full pipeline
+python main.py https://www.youtube.com/@ReallyNotAi
 
-# Run main analysis
-python -m src.main.python.core.main
+# Run with limited videos (for testing)
+python main.py https://www.youtube.com/@ReallyNotAi --max-videos 5
+
+# Skip collection (use existing data)
+python main.py https://www.youtube.com/@ReallyNotAi --skip-collect
+
+# Run individual modules
+python scripts/collect.py https://www.youtube.com/@ReallyNotAi
+python scripts/processor.py
+python scripts/analyzer.py
+python scripts/visualizer.py
 ```
+
+## MODULE DETAILS
+
+### collect.py - YouTubeCommentCollector
+- `get_video_ids()` - Extract video IDs from channel
+- `load_progress()` / `save_progress()` - Checkpoint support
+- `download_comments()` - Download with retry logic
+- `run()` - Main execution with resume support
+
+### processor.py - CommentProcessor
+- `load_json_files()` - Read all JSON files
+- `extract_fields()` - Extract: text, votes, replies, time, video_id
+- `remove_duplicates()` - Dedupe by comment ID and text
+- `remove_emoji_only()` - Filter emoji-only comments
+- `run()` - Output: merged_data.csv
+
+### analyzer.py - CommentAnalyzer
+- `load_model()` - Load DistilBERT (GPU if available)
+- `analyze_sentiment_batch()` - Batch sentiment analysis
+- `calculate_complexity()` - Lexical density, Flesch score
+- `run()` - Add: sentiment_label, sentiment_score, lexical_density
+
+### visualizer.py - CommentVisualizer
+- `plot_sentiment_pie()` - Sentiment distribution
+- `plot_engagement_scatter()` - Lexical density vs sentiment
+- `plot_negative_wordcloud()` - Negative comment keywords
+- `run()` - Generate PNG + HTML outputs
 
 ## TECHNICAL DEBT PREVENTION
-
-### WRONG APPROACH (Creates Technical Debt):
-```bash
-# Creating new file without searching first
-Write(file_path="new_feature.py", content="...")
-```
-
-### CORRECT APPROACH (Prevents Technical Debt):
-```bash
-# 1. SEARCH FIRST
-Grep(pattern="feature.*implementation", include="*.py")
-# 2. READ EXISTING FILES
-Read(file_path="existing_feature.py")
-# 3. EXTEND EXISTING FUNCTIONALITY
-Edit(file_path="existing_feature.py", old_string="...", new_string="...")
-```
-
-## DEBT PREVENTION WORKFLOW
 
 ### Before Creating ANY New File:
 1. **Search First** - Use Grep/Glob to find existing implementations
 2. **Analyze Existing** - Read and understand current patterns
-3. **Decision Tree**: Can extend existing? - DO IT | Must create new? - Document why
+3. **Extend Existing** - Prefer extending over creating new
 4. **Follow Patterns** - Use established project patterns
-5. **Validate** - Ensure no duplication or technical debt
 
 ---
 
 **Prevention is better than consolidation - build clean from the start.**
-**Focus on single source of truth and extending existing functionality.**
-**Each task should maintain clean architecture and prevent technical debt.**
