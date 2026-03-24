@@ -22,12 +22,18 @@ from scripts.collect import YouTubeCommentCollector
 from scripts.processor import CommentProcessor
 from scripts.analyzer import CommentAnalyzer
 from scripts.visualizer import CommentVisualizer
+from scripts.vector_pipeline import run as run_vector_pipeline
+from scripts.vector_visualizer import run as run_vector_visualizer
 
 
 def main(channel_url: str,
          max_videos: int = None,
          skip_collect: bool = False,
-         skip_analyze: bool = False):
+         skip_analyze: bool = False,
+         fetch_titles: bool = False,
+         skip_vector: bool = False,
+         vector_clusters: int = 4,
+         use_sbert: bool = False):
     """
     Run the complete analysis pipeline.
 
@@ -36,6 +42,9 @@ def main(channel_url: str,
         max_videos: Maximum number of videos to process (None for all)
         skip_collect: Skip data collection step (use existing data)
         skip_analyze: Skip analysis step (use existing analyzed data)
+        skip_vector: Skip vector pipeline step
+        vector_clusters: Number of clusters for KMeans (default 4)
+        use_sbert: Use Sentence-BERT for Stage 2 vectorization
     """
     print("=" * 60)
     print("AI-Generated Video Comment Analysis")
@@ -61,6 +70,18 @@ def main(channel_url: str,
             return
     else:
         print("\n[Step 1/4] Skipping data collection (using existing data)")
+
+    # Step 1.5: Fetch video titles (if requested or during full pipeline)
+    if fetch_titles or not skip_collect:
+        print("\n[Step 1.5] Fetching video titles...")
+        print("-" * 40)
+        collector = YouTubeCommentCollector(
+            channel_url=channel_url,
+            output_dir="data/raw_json",
+            progress_dir="data/progress",
+            log_dir="logs"
+        )
+        collector.fetch_video_titles()
 
     # Step 2: Process data
     print("\n[Step 2/4] Processing and cleaning data...")
@@ -100,12 +121,35 @@ def main(channel_url: str,
     )
     visualizer.run()
 
+    # Step 5: Vector semantic clustering
+    if not skip_vector:
+        print("\n[Step 5/6] Running vector semantic pipeline...")
+        print("-" * 40)
+        df_vec, wv, cluster_terms, km = run_vector_pipeline(
+            csv_path="data/merged_data.csv",
+            n_clusters=vector_clusters,
+            use_sbert=use_sbert,
+        )
+
+        # Step 6: Cluster visualization
+        print("\n[Step 6/6] Generating cluster visualizations...")
+        print("-" * 40)
+        from sklearn.preprocessing import normalize
+        from scripts.vector_pipeline import build_comment_matrix
+        matrix = build_comment_matrix(df_vec, wv)
+        run_vector_visualizer(csv_path="data/vector_clusters.csv", matrix=matrix)
+    else:
+        print("\n[Step 5/6] Skipping vector pipeline")
+        print("\n[Step 6/6] Skipping cluster visualization")
+
     # Final summary
     print("\n" + "=" * 60)
     print("Analysis Complete!")
     print("=" * 60)
     print("\nOutput files:")
     print("  - Data: data/merged_data.csv")
+    print("  - Vector clusters: data/vector_clusters.csv")
+    print("  - Cluster terms: data/cluster_top_terms.csv")
     print("  - Charts (PNG): output/png/")
     print("  - Charts (HTML): output/html/")
     print("  - Logs: logs/")
@@ -152,11 +196,40 @@ Examples:
         help="Skip analysis step (use existing analyzed data)"
     )
 
+    parser.add_argument(
+        "--skip-vector",
+        action="store_true",
+        help="Skip vector semantic pipeline"
+    )
+
+    parser.add_argument(
+        "--vector-clusters",
+        type=int,
+        default=4,
+        help="Number of clusters for KMeans (default: 4)"
+    )
+
+    parser.add_argument(
+        "--sbert",
+        action="store_true",
+        help="Use Sentence-BERT for Stage 2 vectorization"
+    )
+
+    parser.add_argument(
+        "--fetch-titles",
+        action="store_true",
+        help="Fetch video titles even when skipping collection"
+    )
+
     args = parser.parse_args()
 
     main(
         channel_url=args.channel_url,
         max_videos=args.max_videos,
         skip_collect=args.skip_collect,
-        skip_analyze=args.skip_analyze
+        skip_analyze=args.skip_analyze,
+        fetch_titles=args.fetch_titles,
+        skip_vector=args.skip_vector,
+        vector_clusters=args.vector_clusters,
+        use_sbert=args.sbert,
     )
