@@ -16,10 +16,16 @@ from sklearn.manifold import TSNE
 logger = logging.getLogger(__name__)
 
 SCHEMA_COLORS = {
-    "Technical Aesthetics": "#4C72B0",
-    "Ontological Evaluation": "#DD8452",
-    "Post-human Poetics": "#55A868",
-    "Affective Resonance": "#C44E52",
+    "Emotional & Faith Expression":       "#4C72B0",
+    "Meme Mockery & Skull Emoji":          "#DD8452",
+    "Non-English & Noise":                 "#55A868",
+    "Instant Emotional Reaction":          "#C44E52",
+    "Celebrity AI Morph Memes":            "#8172B2",
+    "Content Criticism & Platform Meta":   "#937860",
+    "Family Drama & Plot Twist":           "#DA8BC3",
+    "Parenting & Childhood Scenes":        "#8C8C8C",
+    "Absurdist & Chaotic Comments":        "#CCB974",
+    "Toilet Humor & Food Jokes":           "#64B5CD",
 }
 
 
@@ -140,6 +146,89 @@ def plot_top_keywords_table(cluster_terms_path: str = "data/cluster_top_terms.cs
     plt.close()
 
 
+def plot_sentiment_by_cluster(csv_path: str = "data/vector_clusters.csv",
+                              out_dir: str = "output") -> None:
+    """Stacked bar: positive/negative % per cluster."""
+    Path(f"{out_dir}/png").mkdir(parents=True, exist_ok=True)
+    df = pd.read_csv(csv_path)
+    sent = df.groupby(["schema_dimension", "sentiment_label"]).size().unstack(fill_value=0)
+    sent["total"] = sent.sum(axis=1)
+    for col in [c for c in sent.columns if c != "total"]:
+        sent[col] = sent[col] / sent["total"] * 100
+    sent = sent.drop(columns="total").sort_values("NEGATIVE", ascending=True)
+
+    fig, ax = plt.subplots(figsize=(10, 7))
+    sent[["POSITIVE", "NEGATIVE"]].plot(
+        kind="barh", stacked=True, ax=ax,
+        color=["#55A868", "#C44E52"], width=0.7
+    )
+    ax.set_xlabel("Percentage (%)")
+    ax.set_title("Sentiment Distribution by Cluster", fontsize=13, fontweight="bold")
+    ax.legend(["Positive", "Negative"], loc="lower right")
+    ax.axvline(50, color="white", linewidth=0.8, linestyle="--")
+    plt.tight_layout()
+    out_path = f"{out_dir}/png/sentiment_by_cluster.png"
+    plt.savefig(out_path, dpi=150, bbox_inches="tight")
+    logger.info(f"Saved {out_path}")
+    plt.close()
+
+
+def plot_engagement_by_cluster(csv_path: str = "data/vector_clusters.csv",
+                               out_dir: str = "output") -> None:
+    """Horizontal bar: avg votes per cluster."""
+    Path(f"{out_dir}/png").mkdir(parents=True, exist_ok=True)
+    df = pd.read_csv(csv_path)
+    df["votes"] = pd.to_numeric(df["votes"], errors="coerce").fillna(0)
+    avg = df.groupby("schema_dimension")["votes"].mean().sort_values()
+
+    colors = [SCHEMA_COLORS.get(l, "#888888") for l in avg.index]
+    fig, ax = plt.subplots(figsize=(10, 7))
+    bars = ax.barh(avg.index, avg.values, color=colors, height=0.6)
+    ax.bar_label(bars, fmt="%.2f", padding=4, fontsize=9)
+    ax.set_xlabel("Average Votes per Comment")
+    ax.set_title("Engagement (Avg Votes) by Cluster", fontsize=13, fontweight="bold")
+    plt.tight_layout()
+    out_path = f"{out_dir}/png/engagement_by_cluster.png"
+    plt.savefig(out_path, dpi=150, bbox_inches="tight")
+    logger.info(f"Saved {out_path}")
+    plt.close()
+
+
+def plot_cluster_size_and_complexity(csv_path: str = "data/vector_clusters.csv",
+                                     out_dir: str = "output") -> None:
+    """Bubble chart: cluster size vs avg word count, bubble size = avg votes."""
+    Path(f"{out_dir}/png").mkdir(parents=True, exist_ok=True)
+    df = pd.read_csv(csv_path)
+    df["votes"] = pd.to_numeric(df["votes"], errors="coerce").fillna(0)
+    df["word_count"] = pd.to_numeric(df["word_count"], errors="coerce").fillna(0)
+    stats = df.groupby("schema_dimension").agg(
+        count=("text", "count"),
+        avg_words=("word_count", "mean"),
+        avg_votes=("votes", "mean"),
+    ).reset_index()
+
+    fig, ax = plt.subplots(figsize=(11, 8))
+    for _, row in stats.iterrows():
+        color = SCHEMA_COLORS.get(row["schema_dimension"], "#888888")
+        ax.scatter(row["count"], row["avg_words"],
+                   s=row["avg_votes"] * 80 + 40,
+                   color=color, alpha=0.75, edgecolors="white", linewidth=0.8)
+        ax.annotate(row["schema_dimension"],
+                    (row["count"], row["avg_words"]),
+                    fontsize=7.5, ha="center", va="bottom",
+                    xytext=(0, 6), textcoords="offset points")
+    ax.set_xlabel("Cluster Size (# comments)")
+    ax.set_ylabel("Avg Word Count per Comment")
+    ax.set_title("Cluster Size vs Linguistic Complexity\n(bubble size = avg votes)",
+                 fontsize=13, fontweight="bold")
+    plt.tight_layout()
+    out_path = f"{out_dir}/png/cluster_size_complexity.png"
+    plt.savefig(out_path, dpi=150, bbox_inches="tight")
+    logger.info(f"Saved {out_path}")
+    plt.close()
+
+
+
 def run(csv_path: str = "data/vector_clusters.csv",
         matrix: np.ndarray = None,
         method: str = "tsne") -> None:
@@ -161,6 +250,9 @@ def run(csv_path: str = "data/vector_clusters.csv",
 
     plot_clusters(matrix, labels, method=method)
     plot_top_keywords_table()
+    plot_sentiment_by_cluster(csv_path)
+    plot_engagement_by_cluster(csv_path)
+    plot_cluster_size_and_complexity(csv_path)
 
 
 if __name__ == "__main__":
