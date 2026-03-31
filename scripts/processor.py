@@ -5,7 +5,6 @@ Consolidates JSON comment files into a single CSV dataset with cleaning operatio
 """
 
 import os
-import re
 import json
 import logging
 from pathlib import Path
@@ -19,6 +18,7 @@ class CommentProcessor:
 
     def __init__(self, raw_dir: str = "data/raw_json",
                  output_path: str = "data/merged_data.csv",
+                 metadata_path: str = "data/video_metadata.csv",
                  log_dir: str = "logs"):
         """
         Initialize the processor.
@@ -30,6 +30,7 @@ class CommentProcessor:
         """
         self.raw_dir = Path(raw_dir)
         self.output_path = Path(output_path)
+        self.metadata_path = Path(metadata_path)
         self.log_dir = Path(log_dir)
 
         # Create directories
@@ -150,47 +151,54 @@ class CommentProcessor:
 
     def remove_emoji_only(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Remove comments that contain only emojis/emoticons.
+        Remove comments that are completely empty or whitespace-only.
+        Emoji-only comments and low-frequency words are preserved.
 
         Args:
             df: Input DataFrame
 
         Returns:
-            DataFrame with emoji-only comments removed
+            DataFrame with blank-only comments removed
         """
         original_count = len(df)
 
-        # Pattern to match emoji-only strings
-        # Remove emojis and whitespace, check if anything remains
-        emoji_pattern = re.compile(
-            "["
-            "\U0001F600-\U0001F64F"  # emoticons
-            "\U0001F300-\U0001F5FF"  # symbols & pictographs
-            "\U0001F680-\U0001F6FF"  # transport & map symbols
-            "\U0001F1E0-\U0001F1FF"  # flags
-            "\U00002702-\U000027B0"  # dingbats
-            "\U000024C2-\U0001F251"  # enclosed characters
-            "\U0001F900-\U0001F9FF"  # supplemental symbols
-            "\U0001FA00-\U0001FA6F"  # chess symbols
-            "\U0001FA70-\U0001FAFF"  # symbols and pictographs extended-A
-            "\U00002600-\U000026FF"  # misc symbols
-            "]+",
-            flags=re.UNICODE
-        )
-
-        def has_text_content(text):
-            """Check if text has content beyond emojis and whitespace."""
-            if not isinstance(text, str):
-                return False
-            # Remove emojis and whitespace
-            cleaned = emoji_pattern.sub('', text).strip()
-            # Check if any alphanumeric content remains
-            return bool(re.search(r'[a-zA-Z0-9\u4e00-\u9fff]', cleaned))
-
-        df = df[df['text'].apply(has_text_content)]
+        df = df[df['text'].apply(lambda t: isinstance(t, str) and t.strip() != '')]
 
         removed = original_count - len(df)
-        self.logger.info(f"Removed {removed} emoji-only comments ({len(df)} remaining)")
+        self.logger.info(f"Removed {removed} blank comments ({len(df)} remaining)")
+        return df
+
+    def merge_metadata(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Merge video metadata (title, hashtags, ai_explicit) into the comment DataFrame.
+
+        Args:
+            df: Input DataFrame with video_id column
+
+        Returns:
+            DataFrame with video_title, title_hashtags, ai_explicit columns added
+        """
+        if not self.metadata_path.exists():
+            self.logger.warning(f"Video metadata file not found: {self.metadata_path}")
+            df['video_title'] = ''
+            df['title_hashtags'] = ''
+            df['ai_explicit'] = False
+            return df
+
+        metadata = pd.read_csv(self.metadata_path, encoding='utf-8')
+        self.logger.info(f"Loaded metadata for {len(metadata)} videos")
+
+        before_cols = set(df.columns)
+        df = df.merge(metadata[['video_id', 'video_title', 'title_hashtags', 'ai_explicit']],
+                       on='video_id', how='left')
+
+        df['video_title'] = df['video_title'].fillna('')
+        df['title_hashtags'] = df['title_hashtags'].fillna('')
+        df['ai_explicit'] = df['ai_explicit'].fillna(False).astype(bool)
+
+        matched = df['video_title'].ne('').sum()
+        self.logger.info(f"Matched metadata for {matched}/{len(df)} comments")
+
         return df
 
     def clean_text(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -233,16 +241,19 @@ class CommentProcessor:
         # Step 2: Extract fields
         df = self.extract_fields(all_data)
 
-        # Step 3: Remove duplicates
+        # Step 3: Merge video metadata
+        df = self.merge_metadata(df)
+
+        # Step 4: Remove duplicates
         df = self.remove_duplicates(df)
 
-        # Step 4: Remove emoji-only comments
+        # Step 5: Remove emoji-only comments
         df = self.remove_emoji_only(df)
 
-        # Step 5: Clean text
+        # Step 6: Clean text
         df = self.clean_text(df)
 
-        # Step 6: Save to CSV
+        # Step 7: Save to CSV
         df.to_csv(self.output_path, index=False, encoding='utf-8')
         self.logger.info(f"Saved {len(df)} comments to {self.output_path}")
 
